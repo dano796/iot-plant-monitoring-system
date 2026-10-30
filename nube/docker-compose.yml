@@ -1,0 +1,172 @@
+# Stack completo de la nube. Uso: cp .env.example .env && docker compose up -d --build
+# Flujo: T-Beam -> IoT Agent -> Orion -> QuantumLeap -> CrateDB -> processing -> Postgres -> api -> frontend
+#                               Orion -> alertas (suscripciones) -> correo + websocket al frontend
+version: '3.8'
+
+services:
+  # 1. Base de datos para Orion
+  mongo:
+    image: mongo:4.4
+    container_name: fiware-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - fiware-net
+
+  # 2. Orion Context Broker (Corazón de FIWARE)
+  orion:
+    image: fiware/orion:latest
+    container_name: fiware-orion
+    ports:
+      - "1026:1026"
+    depends_on:
+      - mongo
+    command: -dbURI mongodb://mongo:27017 -logLevel DEBUG
+    networks:
+      - fiware-net
+
+  # 3. IoT Agent (Traductor para los sensores)
+  iot-agent:
+    image: fiware/iotagent-ul:latest
+    container_name: fiware-iot-agent
+    ports:
+      - "4041:4041"  # Puerto de gestión
+      - "5555:5555"  # Puerto HTTP donde la tarjeta LILYGO envía los datos
+    depends_on:
+      - orion
+      - mongo
+    environment:
+      - IOTA_CB_HOST=orion
+      - IOTA_CB_PORT=1026
+      - IOTA_NORTH_PORT=4041
+      - IOTA_REGISTRY_TYPE=mongodb
+      - IOTA_LOG_LEVEL=DEBUG
+      - IOTA_TIMESTAMP=true
+      - IOTA_CB_NGSI_VERSION=v2
+      - IOTA_AUTOCAST=true
+      - IOTA_MONGO_HOST=mongo
+      - IOTA_MONGO_PORT=27017
+      - IOTA_MONGO_DB=iota_ul
+      - IOTA_HTTP_PORT=5555
+      - IOTA_PROVIDER_URL=http://iot-agent:4041
+    networks:
+      - fiware-net
+
+  # 4. CrateDB (Base de datos para Series de Tiempo)
+  cratedb:
+    image: crate:5.2.8
+    container_name: fiware-cratedb
+    ports:
+      - "4200:4200"  # Consola de CrateDB
+      - "5432:5432"  # Puerto PostgreSQL para Crate
+    environment:
+      - CRATE_HEAP_SIZE=1g
+    volumes:
+      - crate-data:/usr/share/crate/data
+    command: crate -Cnode.name=crate01 -Ccluster.name=fiware -Chttp.port=4200 -Cnetwork.host=_site_
+    networks:
+      - fiware-net
+
+  # 5. QuantumLeap (Persistencia histórica)
+  quantumleap:
+    image: orchestracities/quantumleap:latest
+    container_name: fiware-quantumleap
+    ports:
+      - "8668:8668"
+    depends_on:
+      - cratedb
+    environment:
+      - CRATE_HOST=cratedb
+    networks:
+      - fiware-net
+
+  # 6. PostgreSQL para datos limpios, analítica y estado de las alertas
+  postgres:
+    image: postgres:15-alpine
+    container_name: fiware-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: plantas_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - fiware-net
+
+  # 7. Módulo de Limpieza y Analítica
+  data-processing:
+    build: ./processing
+    container_name: fiware-processing
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - cratedb
+      - postgres
+    networks:
+      - fiware-net
+
+  # 8. API Backend (FastAPI)
+  api:
+    build: ./api
+    container_name: fiware-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    networks:
+      - fiware-net
+
+  # 9. Alertas reactivas (Flask): recibe el notify de Orion, envia correos y avisa al front por websocket
+  alertas:
+    build: ./alertas
+    container_name: fiware-alertas
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - ALERTA_DESTINO=${ALERTA_DESTINO:-}
+      - FRONT_URL=${FRONT_URL:-}
+      - ALERTAS_TOKEN=${ALERTAS_TOKEN:-}
+      - TEMP_MIN=${TEMP_MIN:-10}
+      - TEMP_MAX=${TEMP_MAX:-30}
+      - HISTERESIS=${HISTERESIS:-2}
+      - CONFIRMACIONES=${CONFIRMACIONES:-3}
+      - SIN_DATOS_S=${SIN_DATOS_S:-120}
+      - VALIDO_MIN=${VALIDO_MIN:-0}
+      - VALIDO_MAX=${VALIDO_MAX:-60}
+    depends_on:
+      - orion
+      - postgres
+    networks:
+      - fiware-net
+
+  # 10. Frontend Web Dashboard
+  frontend:
+    build: ./frontend
+    container_name: fiware-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - fiware-net
+
+volumes:
+  mongo-data:
+  crate-data:
+  postgres-data:
+
+networks:
+  fiware-net:
+    driver: bridge

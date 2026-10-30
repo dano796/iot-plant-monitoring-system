@@ -1,0 +1,19 @@
+# Firmware (PlatformIO)
+firmware/.pio/
+firmware/.vscode/*
+!firmware/.vscode/extensions.json
+firmware/src/secretos.h
+
+# Nube
+nube/.env
+nube/docker-compose.override.yml
+
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+
+# Varios
+*.pem
+.superpowers/
+.playwright-mcp/

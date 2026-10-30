@@ -1,0 +1,277 @@
+<mxfile host="65bd71144e">
+    <diagram id="arquitectura" name="Arquitectura">
+        <mxGraphModel dx="1422" dy="1059" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="titulo" parent="1" style="text;html=1;fontSize=18;align=left;verticalAlign=middle;" value="&lt;b&gt;Arquitectura del slice de alertas reactivas&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="45" width="800" x="40" y="12" as="geometry"/>
+                </mxCell>
+                <mxCell id="tbeam" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;T-Beam&lt;/b&gt;&lt;br&gt;sensor HDC1080" vertex="1">
+                    <mxGeometry height="60" width="140" x="40" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="iota" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;IoT Agent&lt;/b&gt; :5555&lt;br&gt;UltraLight -&amp;gt; NGSI" vertex="1">
+                    <mxGeometry height="60" width="150" x="260" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="orion" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;Orion&lt;/b&gt; :1026&lt;br&gt;entidad Plant:plant001&lt;br&gt;2 suscripciones con filtro q" vertex="1">
+                    <mxGeometry height="80" width="190" x="500" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="ql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#B3B3B3;fontColor=#999999;dashed=1;absoluteArcSize=1;arcSize=20;" value="QuantumLeap" vertex="1">
+                    <mxGeometry height="50" width="150" x="830" y="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="susc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;suscripciones.py&lt;/b&gt;&lt;br&gt;se corre a mano una vez&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;fuera: temp!=10..30 ; temp==0..60&lt;br&gt;dentro: temp==12..28&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="80" width="200" x="805" y="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" edge="1" parent="1" source="tbeam" style="endArrow=classic;html=1;fontSize=10;" target="iota" value="trama UL&lt;br&gt;temperatura|33">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" edge="1" parent="1" source="iota" style="endArrow=classic;html=1;fontSize=10;" target="orion" value="upsert NGSI-v2">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" edge="1" parent="1" source="orion" style="endArrow=classic;html=1;dashed=1;strokeColor=#B3B3B3;" target="ql" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" edge="1" parent="1" source="susc" style="endArrow=classic;html=1;dashed=1;fontSize=10;strokeColor=#d6b656;" target="orion" value="crea / actualiza&lt;br&gt;(PATCH o POST)">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="cont" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#82b366;strokeWidth=2;dashed=0;verticalAlign=top;align=left;spacingLeft=10;fontSize=13;absoluteArcSize=1;arcSize=32;" value="contenedor &lt;b&gt;fiware-alertas&lt;/b&gt; (Flask :5050) — main.py" vertex="1">
+                    <mxGeometry height="440" width="1080" x="40" y="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="data" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;POST /data&lt;/b&gt;&lt;br&gt;valida ?token&lt;br&gt;responde 204 rapido" vertex="1">
+                    <mxGeometry height="70" width="160" x="70" y="290" as="geometry"/>
+                </mxCell>
+                <mxCell id="revisar" parent="1" style="shape=process;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;hilo revisar&lt;/b&gt;&lt;br&gt;cada 30 s&lt;br&gt;(detecta SIN_DATOS)" vertex="1">
+                    <mxGeometry height="70" width="160" x="70" y="520" as="geometry"/>
+                </mxCell>
+                <mxCell id="ngsi" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;ngsi.py&lt;/b&gt;&lt;br&gt;JSON de Orion →&lt;br&gt;Lectura(id, valor, ts)" vertex="1">
+                    <mxGeometry height="70" width="160" x="270" y="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="actualizar" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=0;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;actualizar()&lt;/b&gt;&lt;br&gt;con lock_estado:&lt;br&gt;cargar → paso → guardar" vertex="1">
+                    <mxGeometry height="70" width="170" x="490" y="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="reglas" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;reglas.py&lt;/b&gt;&lt;br&gt;maquina de estados (pura)&lt;br&gt;aplicar_lectura / revisar_periodica" vertex="1">
+                    <mxGeometry height="70" width="190" x="480" y="560" as="geometry"/>
+                </mxCell>
+                <mxCell id="almacen" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;almacen.py&lt;/b&gt;&lt;br&gt;SQL (psycopg2)" vertex="1">
+                    <mxGeometry height="70" width="150" x="740" y="560" as="geometry"/>
+                </mxCell>
+                <mxCell id="cartero" parent="1" style="shape=process;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;hilo cartero&lt;/b&gt;&lt;br&gt;manda pendientes&lt;br&gt;en orden" vertex="1">
+                    <mxGeometry height="70" width="150" x="760" y="290" as="geometry"/>
+                </mxCell>
+                <mxCell id="correo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;correo.py&lt;/b&gt;&lt;br&gt;asunto / cuerpo / enviar" vertex="1">
+                    <mxGeometry height="70" width="150" x="950" y="290" as="geometry"/>
+                </mxCell>
+                <mxCell id="difusor" parent="1" style="shape=process;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;hilo difusor&lt;/b&gt;&lt;br&gt;lee la cola difusion" vertex="1">
+                    <mxGeometry height="60" width="150" x="760" y="410" as="geometry"/>
+                </mxCell>
+                <mxCell id="wsest" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;WS /ws&lt;/b&gt; y &lt;b&gt;GET /estado&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="60" width="150" x="950" y="410" as="geometry"/>
+                </mxCell>
+                <mxCell id="pg" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;PostgreSQL&lt;/b&gt; plantas_db&lt;br&gt;alertas_estado (1 fila)&lt;br&gt;alertas_eventos (cola de correos)" vertex="1">
+                    <mxGeometry height="100" width="230" x="700" y="740" as="geometry"/>
+                </mxCell>
+                <mxCell id="smtp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;SMTP&lt;/b&gt;&lt;br&gt;Gmail :465 / mailpit&lt;br&gt;-&amp;gt; ALERTA_DESTINO" vertex="1">
+                    <mxGeometry height="70" width="160" x="1220" y="290" as="geometry"/>
+                </mxCell>
+                <mxCell id="front" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;Dashboard&lt;/b&gt;&lt;br&gt;frontend/index.html&lt;br&gt;banner de alerta" vertex="1">
+                    <mxGeometry height="60" width="160" x="1220" y="410" as="geometry"/>
+                </mxCell>
+                <mxCell id="f1" edge="1" parent="1" source="orion" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;strokeWidth=2;" target="data" value="1. POST notificacion&lt;br&gt;?token=... (solo si cumple q)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="595" y="200"/>
+                            <mxPoint x="150" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="f2" edge="1" parent="1" source="data" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;strokeWidth=2;" target="ngsi" value="2. parsea">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f3" edge="1" parent="1" source="ngsi" style="endArrow=classic;html=1;fontSize=10;strokeWidth=2;" target="actualizar" value="3.">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f4" edge="1" parent="1" source="actualizar" style="endArrow=classic;startArrow=classic;html=1;fontSize=10;" target="reglas" value="4. paso(estado)&lt;br&gt;→ (nuevo, transicion?)">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f5" edge="1" parent="1" source="actualizar" style="endArrow=classic;startArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;" target="almacen" value="5. cargar / guardar&lt;br&gt;(1 transaccion)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="715" y="435"/>
+                            <mxPoint x="715" y="520"/>
+                            <mxPoint x="815" y="520"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="f6" edge="1" parent="1" source="almacen" style="endArrow=classic;startArrow=classic;html=1;" target="pg" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f7" edge="1" parent="1" source="actualizar" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;strokeColor=#9673a6;" target="cartero" value="6a. hay_eventos.set()&lt;br&gt;(timbre)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="595" y="325"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="f8" edge="1" parent="1" source="actualizar" style="endArrow=classic;html=1;fontSize=10;dashed=1;strokeColor=#9673a6;" target="difusor" value="6b. difusion.put()">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f9" edge="1" parent="1" source="cartero" style="endArrow=classic;startArrow=classic;html=1;fontSize=10;edgeStyle=orthogonalEdgeStyle;" target="almacen" value="pendientes /&lt;br&gt;marcar_enviado">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="930" y="325"/>
+                            <mxPoint x="930" y="595"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="f10" edge="1" parent="1" source="cartero" style="endArrow=classic;html=1;" target="correo" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f11" edge="1" parent="1" source="correo" style="endArrow=classic;html=1;fontSize=10;strokeWidth=2;" target="smtp" value="7a. correo">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f12" edge="1" parent="1" source="difusor" style="endArrow=classic;html=1;" target="wsest" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f13" edge="1" parent="1" source="wsest" style="endArrow=classic;startArrow=classic;html=1;fontSize=10;strokeWidth=2;" target="front" value="7b. JSON por ws">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f14" edge="1" parent="1" source="revisar" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;strokeColor=#9673a6;" target="orion" value="GET /v2/entities/Plant:plant001&lt;br&gt;(lee TimeInstant)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="20" y="555"/>
+                            <mxPoint x="20" y="160"/>
+                            <mxPoint x="560" y="160"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="f15" edge="1" parent="1" source="revisar" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;fontSize=10;strokeColor=#9673a6;" target="actualizar" value="revisar_periodica">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="595" y="500"/>
+                            <mxPoint x="260" y="500"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ley" parent="1" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;strokeColor=#999999;rounded=1;spacing=8;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;Leyenda&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="186" width="270" x="40" y="720" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m0" parent="1" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;absoluteArcSize=1;arcSize=3;" value="" vertex="1">
+                    <mxGeometry height="14" width="26" x="52" y="759" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_t0" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="rutas HTTP y código de main.py" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="754" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m1" parent="1" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;absoluteArcSize=1;arcSize=3;" value="" vertex="1">
+                    <mxGeometry height="14" width="26" x="52" y="783" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_t1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="hilos de fondo" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="778" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m2" parent="1" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;absoluteArcSize=1;arcSize=3;" value="" vertex="1">
+                    <mxGeometry height="14" width="26" x="52" y="807" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_t2" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="la regla (umbrales)" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m3" parent="1" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;absoluteArcSize=1;arcSize=3;" value="" vertex="1">
+                    <mxGeometry height="14" width="26" x="52" y="831" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_t3" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="salidas hacia personas" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="826" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m4" edge="1" parent="1" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#000000">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="50" y="862" as="sourcePoint"/>
+                        <mxPoint x="80" y="862" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ley_t4" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="camino de una trama" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="850" as="geometry"/>
+                </mxCell>
+                <mxCell id="ley_m5" edge="1" parent="1" style="endArrow=none;html=1;dashed=1;strokeColor=#9673a6">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="50" y="886" as="sourcePoint"/>
+                        <mxPoint x="80" y="886" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ley_t5" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" value="aviso entre hilos / consulta a Orion" vertex="1">
+                    <mxGeometry height="24" width="212" x="90" y="874" as="geometry"/>
+                </mxCell>
+                <mxCell id="nota" parent="1" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fillColor=#fffbe6;strokeColor=#d6b656;rounded=1;spacing=8;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;Por que hilos separados:&lt;/b&gt; /data solo guarda y avisa. El correo (lento, puede fallar) y el websocket salen en otros hilos, asi Orion recibe su 204 en milisegundos.&lt;br&gt;&lt;br&gt;&lt;b&gt;Outbox:&lt;/b&gt; la transicion se guarda en alertas_eventos en la misma transaccion que el estado. Si SMTP falla, el evento sigue pendiente y el cartero lo reintenta." vertex="1">
+                    <mxGeometry height="130" width="340" x="330" y="720" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="estados" name="Maquina de estados">
+        <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1300" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="t" parent="1" style="text;html=1;fontSize=15;align=left;" value="&lt;b&gt;reglas.py — maquina de estados&lt;/b&gt; (valores por defecto: TEMP_MIN=10, TEMP_MAX=30, HISTERESIS=2, CONFIRMACIONES=3, SIN_DATOS_S=120)" vertex="1">
+                    <mxGeometry height="30" width="1100" x="40" y="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="ok" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=18;strokeWidth=2;" value="&lt;b&gt;OK&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="90" width="140" x="140" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="al" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=18;strokeWidth=2;" value="&lt;b&gt;ALARMA&lt;/b&gt;" vertex="1">
+                    <mxGeometry height="90" width="140" x="760" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="sd" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=18;strokeWidth=2;" value="&lt;b&gt;SIN_DATOS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;recuerda &quot;previo&quot;&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="100" width="170" x="440" y="430" as="geometry"/>
+                </mxCell>
+                <mxCell id="ini" parent="1" style="ellipse;html=1;fillColor=#000000;" value="" vertex="1">
+                    <mxGeometry height="30" width="30" x="40" y="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="tini" edge="1" parent="1" source="ini" style="endArrow=classic;html=1;fontSize=10;" target="ok" value="arranque&lt;br&gt;(sin fila en BD)">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="t1" edge="1" parent="1" source="ok" style="endArrow=classic;html=1;fontSize=11;curved=1;strokeWidth=2;" target="al" value="3 lecturas FUERA seguidas&lt;br&gt;(&amp;lt; 10 o &amp;gt; 30)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="520" y="90"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="t2" edge="1" parent="1" source="al" style="endArrow=classic;html=1;fontSize=11;curved=1;strokeWidth=2;" target="ok" value="3 lecturas DENTRO seguidas&lt;br&gt;(12 a 28)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="520" y="280"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="t3" edge="1" parent="1" source="ok" style="endArrow=classic;html=1;fontSize=10;dashed=1;" target="sd" value="&amp;gt; 120 s sin tramas&lt;br&gt;(hilo revisar)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="260" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="t4" edge="1" parent="1" source="al" style="endArrow=classic;html=1;fontSize=10;dashed=1;" target="sd" value="&amp;gt; 120 s sin tramas&lt;br&gt;(hilo revisar)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="800" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="t5" edge="1" parent="1" source="sd" style="endArrow=classic;html=1;fontSize=10;" target="ok" value="1 lectura DENTRO&lt;br&gt;(sin confirmar)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="380" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="t6" edge="1" parent="1" source="sd" style="endArrow=classic;html=1;fontSize=10;" target="al" value="1 lectura FUERA&lt;br&gt;(sin confirmar)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="680" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="notas" parent="1" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;fillColor=#fffbe6;strokeColor=#d6b656;rounded=1;spacing=10;absoluteArcSize=1;arcSize=20;" value="&lt;b&gt;Clases de lectura&lt;/b&gt; (clasificar)&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;0 ── FUERA ── 10 ─ BANDA ─ 12 ──── DENTRO ──── 28 ─ BANDA ─ 30 ── FUERA ── 60&lt;/font&gt;&lt;br&gt;&lt;br&gt;• &lt;b&gt;racha&lt;/b&gt;: cuenta lecturas seguidas &quot;contrarias&quot; al estado (FUERA si estoy en OK, DENTRO si estoy en ALARMA). Una lectura a favor la reinicia a 0.&lt;br&gt;• &lt;b&gt;BANDA&lt;/b&gt; (histeresis): ni suma ni reinicia la racha. Evita que un 29.9 / 30.1 / 29.9 haga parpadear la alarma.&lt;br&gt;• &lt;b&gt;INVALIDA&lt;/b&gt; (&amp;lt; 0 o &amp;gt; 60, p. ej. 125 de un sensor desconectado): se ignora.&lt;br&gt;• &lt;b&gt;ts &amp;lt;= ultimo_ts&lt;/b&gt;: notificacion repetida o atrasada, se ignora (idempotencia).&lt;br&gt;• Desde SIN_DATOS, una lectura en BANDA vuelve al estado &lt;i&gt;previo&lt;/i&gt;.&lt;br&gt;• Cada flecha = 1 Transicion = 1 correo + 1 mensaje websocket. Mientras no cambie el estado no se envia nada." vertex="1">
+                    <mxGeometry height="200" width="1000" x="40" y="580" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

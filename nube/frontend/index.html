@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - Monitoreo de Plantas IoT</title>
+
+  <!-- Google Fonts: Manrope -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Manrope', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 font-sans p-6">
+
+  <!-- Banner de alertas (lo llena el websocket del servicio de alertas) -->
+  <div id="banner-alerta" class="hidden max-w-6xl mx-auto mb-4 px-5 py-3 rounded-2xl shadow-sm font-semibold text-white"></div>
+
+  <!-- Header -->
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div>
+      <h1 class="text-2xl font-bold text-emerald-800 flex items-center gap-2">
+        🪴 Dashboard de Monitoreo IoT
+      </h1>
+      <p class="text-gray-500 text-sm mt-1">LILYGO ESP32 LoRa & Architecture FIWARE</p>
+    </div>
+    <div class="mt-4 md:mt-0 flex items-center gap-3">
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+        <span class="w-2 h-2 mr-2 bg-emerald-500 rounded-full animate-ping"></span> En vivo
+      </span>
+      <button onclick="fetchData()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 transition">
+        🔄 Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Pestañas -->
+  <div class="max-w-6xl mx-auto flex gap-2 mb-6">
+    <button id="btn-vivo" onclick="mostrarTab('vivo')" class="tab px-4 py-2 rounded-lg text-sm font-semibold">📡 En vivo</button>
+    <button id="btn-hist" onclick="mostrarTab('hist')" class="tab px-4 py-2 rounded-lg text-sm font-semibold">🗂️ Históricos</button>
+  </div>
+
+  <div id="tab-vivo">
+  <!-- Cards de Sensores (4 Tarjetas) -->
+  <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+    <!-- Temperatura -->
+    <div id="card-temp" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-medium text-gray-500">Temperatura</span>
+        <span class="text-xl">🌡️</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="val-temp">-- °C</div>
+      <p class="text-xs text-gray-400 mt-2">Sensor HDC1080</p>
+    </div>
+
+    <!-- Humedad Aire -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-medium text-gray-500">Humedad Aire</span>
+        <span class="text-xl">💨</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="val-haire">-- %</div>
+      <p class="text-xs text-gray-400 mt-2">Sensor HDC1080</p>
+    </div>
+
+    <!-- Humedad Suelo -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-medium text-gray-500">Humedad Suelo</span>
+        <span class="text-xl">🌱</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="val-hsuelo">-- %</div>
+      <div class="mt-3">
+        <span id="badge-estado" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-600">
+          Cargando...
+        </span>
+      </div>
+    </div>
+
+    <!-- Luminosidad -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-medium text-gray-500">Luminosidad</span>
+        <span class="text-xl">☀️</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="val-luz">-- lux</div>
+      <p class="text-xs text-gray-400 mt-2">Sensor AP3216</p>
+    </div>
+
+  </div>
+
+  <!-- Charts Containers -->
+  <div class="max-w-6xl mx-auto flex flex-col gap-8">
+    
+    <!-- Gráfico 1: Temperatura y Humedad -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        📊 Historial de Temperatura y Humedad
+      </h2>
+      <div class="relative h-64 w-full">
+        <canvas id="plantChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico 2: Luminosidad -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        ☀️ Historial de Luminosidad (Lux)
+      </h2>
+      <div class="relative h-64 w-full">
+        <canvas id="luxChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- Pestaña Históricos -->
+  <div id="tab-hist" class="hidden max-w-6xl mx-auto flex flex-col gap-8">
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-end gap-4">
+      <label class="text-sm text-gray-500">Desde
+        <input id="hist-desde" type="datetime-local" class="block mt-1 border border-gray-300 rounded-lg px-2 py-1 text-gray-800">
+      </label>
+      <label class="text-sm text-gray-500">Hasta
+        <input id="hist-hasta" type="datetime-local" class="block mt-1 border border-gray-300 rounded-lg px-2 py-1 text-gray-800">
+      </label>
+      <button onclick="cargarHistorico()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-1.5 rounded-lg transition">Consultar</button>
+      <div class="flex gap-2 ml-auto">
+        <button onclick="rapido(1)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">1 h</button>
+        <button onclick="rapido(24)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">24 h</button>
+        <button onclick="rapido(24 * 7)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">7 días</button>
+        <button onclick="rapido(24 * 30)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">30 días</button>
+      </div>
+      <p id="hist-info" class="w-full text-xs text-gray-400"></p>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">📊 Temperatura y Humedad</h2>
+      <div class="relative h-72 w-full"><canvas id="histPlantChart"></canvas></div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">☀️ Luminosidad (Lux)</h2>
+      <div class="relative h-72 w-full"><canvas id="histLuxChart"></canvas></div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">🗂️ Registros</h2>
+      <div class="overflow-auto max-h-96">
+        <table class="w-full text-sm">
+          <thead class="text-left text-gray-500 sticky top-0 bg-white">
+            <tr><th class="py-2 pr-4">Fecha</th><th class="pr-4">Temp (°C)</th><th class="pr-4">Hum. Aire (%)</th><th class="pr-4">Hum. Suelo (%)</th><th class="pr-4">Luz (lux)</th><th>Lecturas</th></tr>
+          </thead>
+          <tbody id="hist-tabla" class="text-gray-800"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const API_URL = "http://" + window.location.hostname + ":8000/api/plantas";
+    let plantChart, luxChart, histPlantChart, histLuxChart;
+
+    function initCharts() {
+      Chart.defaults.font.family = 'Manrope, sans-serif';
+      [plantChart, luxChart] = crearGraficas('plantChart', 'luxChart');
+      [histPlantChart, histLuxChart] = crearGraficas('histPlantChart', 'histLuxChart');
+    }
+
+    function crearGraficas(idPlant, idLux) {
+      // Gráfico 1: Temp & Humedad
+      const ctxPlant = document.getElementById(idPlant).getContext('2d');
+      const plantChart = new Chart(ctxPlant, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Temp (°C)', data: [], borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.3 },
+            { label: 'Hum. Aire (%)', data: [], borderColor: '#3b82f6', backgroundColor: '#3b82f620', tension: 0.3 },
+            { label: 'Hum. Suelo (%)', data: [], borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'Valor / Porcentaje' } } }
+        }
+      });
+
+      // Gráfico 2: Luminosidad
+      const ctxLux = document.getElementById(idLux).getContext('2d');
+      const luxChart = new Chart(ctxLux, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Luminosidad (lux)', data: [], borderColor: '#f59e0b', backgroundColor: '#f59e0b20', fill: true, tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'Lux (lx)' } } }
+        }
+      });
+      return [plantChart, luxChart];
+    }
+
+    function pintar(plant, lux, rows, labels) {
+      plant.data.labels = labels;
+      plant.data.datasets[0].data = rows.map(item => item.temperatura);
+      plant.data.datasets[1].data = rows.map(item => item.humedad_aire);
+      plant.data.datasets[2].data = rows.map(item => item.humedad_suelo);
+      plant.update();
+      lux.data.labels = labels;
+      lux.data.datasets[0].data = rows.map(item => item.luminosidad);
+      lux.update();
+    }
+
+    function mostrarTab(tab) {
+      for (const t of ['vivo', 'hist']) {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`btn-${t}`).className = 'tab px-4 py-2 rounded-lg text-sm font-semibold ' +
+          (t === tab ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50');
+      }
+      if (tab === 'hist' && !histPlantChart.data.labels.length) rapido(24);
+    }
+
+    // datetime-local trabaja en hora local sin zona
+    const aInput = d => new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    function rapido(horas) {
+      const hasta = new Date();
+      document.getElementById('hist-hasta').value = aInput(hasta);
+      document.getElementById('hist-desde').value = aInput(new Date(hasta - horas * 3600000));
+      cargarHistorico();
+    }
+
+    async function cargarHistorico() {
+      const desde = new Date(document.getElementById('hist-desde').value).getTime();
+      const hasta = new Date(document.getElementById('hist-hasta').value).getTime();
+      const info = document.getElementById('hist-info');
+      if (!(desde < hasta)) { info.innerText = 'Rango inválido: "Desde" debe ser anterior a "Hasta".'; return; }
+      info.innerText = 'Cargando...';
+      try {
+        const res = await fetch(`${API_URL}/rango?desde=${desde}&hasta=${hasta}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rows = await res.json();
+        const largo = hasta - desde > 86400000;
+        const fmt = ts => new Date(ts).toLocaleString([], largo
+          ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }
+          : { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        pintar(histPlantChart, histLuxChart, rows, rows.map(r => fmt(r.timestamp)));
+
+        const total = rows.reduce((s, r) => s + r.lecturas, 0);
+        info.innerText = rows.length
+          ? `${total} lecturas en ${rows.length} puntos` + (total > rows.length ? ' (promediadas por ventana de tiempo)' : '')
+          : 'Sin datos en ese rango.';
+        document.getElementById('hist-tabla').innerHTML = rows.slice().reverse().map(r =>
+          `<tr class="border-t border-gray-100"><td class="py-1.5 pr-4">${new Date(r.timestamp).toLocaleString()}</td>` +
+          `<td class="pr-4">${r.temperatura}</td><td class="pr-4">${r.humedad_aire}</td><td class="pr-4">${r.humedad_suelo}</td>` +
+          `<td class="pr-4">${r.luminosidad}</td><td>${r.lecturas}</td></tr>`).join('');
+      } catch (err) {
+        info.innerText = 'Error cargando históricos: ' + err.message;
+      }
+    }
+
+    async function fetchData() {
+      try {
+        // Ultima lectura
+        const resUlt = await fetch(`${API_URL}/ultimo`);
+        if (resUlt.ok) {
+          const data = await resUlt.json();
+          document.getElementById('val-temp').innerText = `${data.temperatura} °C`;
+          document.getElementById('val-haire').innerText = `${data.humedad_aire} %`;
+          document.getElementById('val-hsuelo').innerText = `${data.humedad_suelo} %`;
+          document.getElementById('val-luz').innerText = `${data.luminosidad} lux`;
+
+          const badge = document.getElementById('badge-estado');
+          badge.innerText = data.estado_planta;
+          if (data.estado_planta === 'OPTIMO') {
+            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-800";
+          } else if (data.estado_planta === 'NECESITA_RIEGO') {
+            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-100 text-amber-800";
+          } else {
+            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-rose-100 text-rose-800";
+          }
+        }
+
+        // Historico
+        const resHist = await fetch(`${API_URL}/historico`);
+        if (resHist.ok) {
+          const hist = await resHist.json();
+          const reversed = hist.reverse();
+
+          const labels = reversed.map(item => new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          pintar(plantChart, luxChart, reversed, labels);
+        }
+      } catch (err) {
+        console.error("Error cargando datos:", err);
+      }
+    }
+
+    // --- Alertas en vivo (servicio alertas :5050, websocket) ---
+    const ALERTAS_URL = "http://" + window.location.hostname + ":5050";
+    const WS_URL = "ws://" + window.location.hostname + ":5050/ws";
+    const BANNER_BASE = "max-w-6xl mx-auto mb-4 px-5 py-3 rounded-2xl shadow-sm font-semibold text-white";
+    let ocultarBanner;
+
+    const horaDe = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const planta = id => id.split(':').pop();
+
+    function pintarAlerta(msg) {
+      const banner = document.getElementById('banner-alerta');
+      const card = document.getElementById('card-temp');
+      const valor = document.getElementById('val-temp');
+      const alarma = msg.estado === 'ALARMA';
+      card.classList.toggle('border-red-500', alarma);
+      card.classList.toggle('border-2', alarma);
+      card.classList.toggle('border-gray-100', !alarma);
+      valor.classList.toggle('text-red-600', alarma);
+      valor.classList.toggle('text-gray-900', !alarma);
+      clearTimeout(ocultarBanner);
+
+      if (alarma) {
+        banner.className = BANNER_BASE + ' bg-red-600';
+        banner.innerText = `⚠ ALARMA · ${planta(msg.entity_id)} · Temperatura ${msg.valor.toFixed(1)} °C ${msg.umbral} °C · desde ${horaDe(msg.desde)}`;
+      } else if (msg.estado === 'SIN_DATOS') {
+        banner.className = BANNER_BASE + ' bg-gray-500';
+        banner.innerText = `SIN DATOS · ${planta(msg.entity_id)} · última trama ` + (msg.ultimo_ts ? horaDe(msg.ultimo_ts) : '—');
+      } else if (msg.de === 'ALARMA' || msg.de === 'SIN_DATOS') {
+        banner.className = BANNER_BASE + ' bg-emerald-600';
+        banner.innerText = `✓ OK · ${planta(msg.entity_id)} · Temperatura ${msg.valor.toFixed(1)} °C`;
+        ocultarBanner = setTimeout(() => banner.classList.add('hidden'), 5000);
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function conectarAlertas() {
+      fetch(`${ALERTAS_URL}/estado`).then(r => r.ok ? r.json() : null).then(m => m && pintarAlerta(m)).catch(() => {});
+      const ws = new WebSocket(WS_URL);
+      ws.onmessage = ev => pintarAlerta(JSON.parse(ev.data));
+      ws.onclose = () => setTimeout(conectarAlertas, 3000);   // reintento silencioso si el servicio esta caido
+    }
+
+    window.onload = () => {
+      initCharts();
+      mostrarTab('vivo');
+      fetchData();
+      setInterval(fetchData, 5000); // Polling cada 5 segundos
+      conectarAlertas();
+    };
+  </script>
+</body>
+</html>
