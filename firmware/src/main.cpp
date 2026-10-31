@@ -11,7 +11,7 @@
 #include <ClosedCube_HDC1080.h>
 #include <TinyGPSPlus.h>
 #include <HTTPClient.h>
-#include "secretos.h"   // WIFI_SSID, WIFI_PASS, AGENTE_URL (IoT Agent UL); no se sube a git, ver secretos.example.h
+#include "secretos.h"   // WIFI_SSID, WIFI_PASS, AGENTE_URL (IoT Agent UL)
 
 // ---- Radio LoRa (frecuencia en MHz, potencia en dBm, ancho de banda en kHz) ----
 #ifndef CONFIG_RADIO_FREQ

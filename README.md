@@ -41,7 +41,7 @@ Requiere Docker con Compose v2.
 
 ```bash
 cd nube
-cp .env.example .env          # llenar ALERTAS_TOKEN (openssl rand -hex 16) y SMTP_*
+cp .env.example .env # llenar ALERTAS_TOKEN (openssl rand -hex 16) y SMTP_*
 docker compose up -d --build
 ```
 
@@ -78,6 +78,4 @@ pio device monitor
 - Emanuel Londoño Osorio
 - Valeria Zuluaga Alzate
 
----
-
-Internet de las Cosas
+## Internet de las Cosas - Universidad Pontificia Bolivariana

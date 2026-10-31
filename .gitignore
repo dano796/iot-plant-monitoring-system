@@ -17,3 +17,6 @@ __pycache__/
 *.pem
 .superpowers/
 .playwright-mcp/
+
+# Modelos fuente de la carcasa (privados, no publicar)
+model/

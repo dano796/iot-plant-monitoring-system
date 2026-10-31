@@ -1,5 +1,4 @@
-// Plantilla de credenciales. Copiar a secretos.h (ignorado por git) y llenar:
-//   cp secretos.example.h secretos.h
+// Plantilla de credenciales. Copiar a secretos.h y llenar: cp secretos.example.h secretos.h
 #pragma once
 
 #define WIFI_SSID   "mi_red"
