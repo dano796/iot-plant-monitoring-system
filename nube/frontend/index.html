@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - Monitoreo de Plantas IoT</title>
 
+  <!-- Tema: el guardado, o el del sistema -->
+  <script>
+    try {
+      const t = localStorage.getItem('tema');
+      if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+    } catch (e) {}
+  </script>
+
   <!-- Google Fonts: Manrope -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,116 +22,206 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
             sans: ['Manrope', 'sans-serif'],
           },
+          colors: {
+            fondo: 'rgb(var(--fondo) / <alpha-value>)',
+            card: 'rgb(var(--card) / <alpha-value>)',
+            ink: 'rgb(var(--ink) / <alpha-value>)',
+            muted: 'rgb(var(--muted) / <alpha-value>)',
+            linea: 'rgb(var(--linea) / <alpha-value>)',
+            pista: 'rgb(var(--pista) / <alpha-value>)',
+            brand: { 50: '#eefaf4', 100: '#d6f3e5', 500: '#22b07d', 600: '#16936a', 700: '#127556' },
+          },
+          boxShadow: {
+            suave: '0 1px 2px rgba(10,20,15,.05), 0 8px 28px rgba(10,20,15,.07)',
+          },
         },
       },
     }
   </script>
+  <style>
+    :root { --fondo: 243 246 241; --card: 255 255 255; --ink: 20 35 27; --muted: 111 127 117; --linea: 230 236 227; --pista: 232 238 229; --brillo: 227 245 234; }
+    .dark { --fondo: 12 18 15; --card: 21 30 25; --ink: 230 238 232; --muted: 145 161 152; --linea: 37 50 43; --pista: 30 42 36; --brillo: 22 52 38; color-scheme: dark; }
+    .hero-fondo { background: radial-gradient(ellipse at 80% 20%, rgb(var(--brillo)) 0%, rgb(var(--card)) 60%); }
+    .icono { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .num { font-variant-numeric: tabular-nums; }
+    .fecha::-webkit-calendar-picker-indicator { display: none; }
+    .aparecer { animation: aparecer .35s ease-out; }
+    @keyframes aparecer { from { opacity: 0; transform: translateY(-6px); } }
+    /* mascota: los ojos miran al cursor y parpadean */
+    .mascota { display: block; }
+    .mascota-cara { transform: translate(var(--mx, 0px), var(--my, 0px)); transition: transform .15s ease-out; }
+    .mascota .ojo { transform-box: fill-box; transform-origin: center; animation: parpadeo 6s ease-in-out infinite; }
+    @keyframes parpadeo { 0%, 90%, 100% { transform: scaleY(1); } 93% { transform: scaleY(.1); } }
+    @media (prefers-reduced-motion: reduce) { .mascota .ojo { animation: none; } }
+    #escena3d { opacity: 0; transition: opacity .8s ease; }
+    #escena3d.listo { opacity: 1; }
+  </style>
 
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Three.js (escena 3D del hero) -->
+  <script type="importmap">
+  { "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 font-sans p-6">
+<body class="bg-fondo min-h-screen text-ink font-sans antialiased p-4 md:p-8">
+
+  <!-- Barra superior -->
+  <header class="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <!-- Mascota: cuadro con brazos de cactus y ojos al estilo de los bots de Grok; siguen el cursor y parpadean -->
+      <span class="mascota w-[52px] h-10 shrink-0" data-reach="3" aria-hidden="true">
+        <svg viewBox="-6 0 52 40" class="w-full h-full overflow-visible">
+          <!-- brazos de cactus: el izquierdo mas bajo, el derecho mas alto -->
+          <path d="M7 24H3.5a3.5 3.5 0 0 1-3.5-3.5V15.5" fill="none" stroke="#22b07d" stroke-width="6.5" stroke-linecap="round"/>
+          <path d="M33 16.5h2a3.5 3.5 0 0 0 3.5-3.5V8" fill="none" stroke="#22b07d" stroke-width="6.5" stroke-linecap="round"/>
+          <rect x="6" y="5" width="28" height="31" rx="11" fill="#22b07d"/>
+          <g class="mascota-cara">
+            <rect class="ojo" x="13.5" y="14" width="5" height="12" rx="2.5" fill="#0f1f17"/>
+            <rect class="ojo" x="21.5" y="14" width="5" height="12" rx="2.5" fill="#0f1f17"/>
+          </g>
+        </svg>
+      </span>
+      <div>
+        <h1 class="text-base font-bold leading-tight">Monitoreo de Plantas IoT</h1>
+        <p class="text-xs text-muted">LILYGO ESP32 LoRa & Architecture FIWARE</p>
+      </div>
+    </div>
+
+    <!-- Pestañas -->
+    <nav class="col-span-2 md:col-span-1 order-last md:order-none flex p-1 rounded-full bg-pista">
+      <button id="btn-vivo" onclick="mostrarTab('vivo')" class="tab"><svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>En vivo</button>
+      <button id="btn-hist" onclick="mostrarTab('hist')" class="tab"><svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Históricos</button>
+    </nav>
+
+    <div class="justify-self-end flex items-center gap-2">
+      <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-card text-brand-700 dark:text-brand-500 shadow-suave">
+        <span class="relative flex w-2 h-2">
+          <span class="absolute inline-flex w-full h-full rounded-full bg-brand-500 opacity-60 animate-ping"></span>
+          <span class="relative inline-flex w-2 h-2 rounded-full bg-brand-500"></span>
+        </span>
+        En vivo
+      </span>
+      <button onclick="alternarTema()" title="Cambiar tema" aria-label="Cambiar tema" class="w-8 h-8 grid place-items-center rounded-full bg-card text-ink hover:text-brand-700 dark:hover:text-brand-500 shadow-suave transition">
+        <svg class="icono !w-4 !h-4 dark:hidden" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="icono !w-4 !h-4 hidden dark:block" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <a href="https://github.com/dano796/iot-plant-monitoring-system" target="_blank" rel="noopener" title="Repositorio en GitHub" aria-label="Repositorio en GitHub" class="w-8 h-8 grid place-items-center rounded-full bg-card text-ink hover:text-brand-700 dark:hover:text-brand-500 shadow-suave transition">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+  </header>
 
   <!-- Banner de alertas (lo llena el websocket del servicio de alertas) -->
-  <div id="banner-alerta" class="hidden max-w-6xl mx-auto mb-4 px-5 py-3 rounded-2xl shadow-sm font-semibold text-white"></div>
-
-  <!-- Header -->
-  <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-    <div>
-      <h1 class="text-2xl font-bold text-emerald-800 flex items-center gap-2">
-        🪴 Dashboard de Monitoreo IoT
-      </h1>
-      <p class="text-gray-500 text-sm mt-1">LILYGO ESP32 LoRa & Architecture FIWARE</p>
-    </div>
-    <div class="mt-4 md:mt-0 flex items-center gap-3">
-      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-        <span class="w-2 h-2 mr-2 bg-emerald-500 rounded-full animate-ping"></span> En vivo
-      </span>
-      <button onclick="fetchData()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 transition">
-        🔄 Actualizar
-      </button>
-    </div>
-  </div>
-
-  <!-- Pestañas -->
-  <div class="max-w-6xl mx-auto flex gap-2 mb-6">
-    <button id="btn-vivo" onclick="mostrarTab('vivo')" class="tab px-4 py-2 rounded-lg text-sm font-semibold">📡 En vivo</button>
-    <button id="btn-hist" onclick="mostrarTab('hist')" class="tab px-4 py-2 rounded-lg text-sm font-semibold">🗂️ Históricos</button>
-  </div>
+  <div id="banner-alerta" class="hidden"></div>
 
   <div id="tab-vivo">
-  <!-- Cards de Sensores (4 Tarjetas) -->
-  <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
-    <!-- Temperatura -->
-    <div id="card-temp" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-sm font-medium text-gray-500">Temperatura</span>
-        <span class="text-xl">🌡️</span>
+  <!-- Hero: valores actuales + modelo 3D del nodo -->
+  <section class="mb-6 rounded-[32px] overflow-hidden shadow-suave hero-fondo">
+    <div class="grid lg:grid-cols-[1.05fr_1fr]">
+
+      <div class="p-6 md:p-10 flex flex-col justify-center order-2 lg:order-1">
+        <p class="text-xs font-semibold uppercase tracking-[.18em] text-brand-600 mb-2">Planta 001</p>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-8">Así está tu planta<br class="hidden md:block"> en este momento</h2>
+
+        <div class="grid grid-cols-2 gap-3 md:gap-4">
+
+          <!-- Temperatura -->
+          <div id="card-temp" class="p-4 md:p-5 rounded-3xl bg-card/70 backdrop-blur ring-1 ring-linea transition">
+            <div class="flex items-center gap-2 text-muted mb-3">
+              <span class="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 grid place-items-center">
+                <svg class="icono" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+              </span>
+              <span class="text-xs font-semibold">Temperatura</span>
+            </div>
+            <div class="num text-2xl md:text-3xl font-bold tracking-tight text-ink" id="val-temp">-- °C</div>
+            <p class="text-[11px] text-muted mt-1">Sensor HDC1080</p>
+          </div>
+
+          <!-- Humedad Aire -->
+          <div class="p-4 md:p-5 rounded-3xl bg-card/70 backdrop-blur ring-1 ring-linea">
+            <div class="flex items-center gap-2 text-muted mb-3">
+              <span class="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-500 grid place-items-center">
+                <svg class="icono" viewBox="0 0 24 24"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+              </span>
+              <span class="text-xs font-semibold">Humedad aire</span>
+            </div>
+            <div class="num text-2xl md:text-3xl font-bold tracking-tight" id="val-haire">-- %</div>
+            <p class="text-[11px] text-muted mt-1">Sensor HDC1080</p>
+          </div>
+
+          <!-- Humedad Suelo -->
+          <div class="p-4 md:p-5 rounded-3xl bg-card/70 backdrop-blur ring-1 ring-linea">
+            <div class="flex items-center gap-2 text-muted mb-3">
+              <span class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-500 grid place-items-center">
+                <svg class="icono" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+              </span>
+              <span class="text-xs font-semibold">Humedad suelo</span>
+            </div>
+            <div class="num text-2xl md:text-3xl font-bold tracking-tight" id="val-hsuelo">-- %</div>
+            <div class="mt-1.5">
+              <span id="badge-estado" class="inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-pista text-muted">
+                Cargando...
+              </span>
+            </div>
+          </div>
+
+          <!-- Luminosidad -->
+          <div class="p-4 md:p-5 rounded-3xl bg-card/70 backdrop-blur ring-1 ring-linea">
+            <div class="flex items-center gap-2 text-muted mb-3">
+              <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500 grid place-items-center">
+                <svg class="icono" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+              </span>
+              <span class="text-xs font-semibold">Luminosidad</span>
+            </div>
+            <div class="num text-2xl md:text-3xl font-bold tracking-tight" id="val-luz">-- lux</div>
+            <p class="text-[11px] text-muted mt-1">Sensor AP3216</p>
+          </div>
+
+        </div>
       </div>
-      <div class="text-3xl font-bold text-gray-900" id="val-temp">-- °C</div>
-      <p class="text-xs text-gray-400 mt-2">Sensor HDC1080</p>
+
+      <!-- Modelo 3D: carcasa impresa + maceta -->
+      <div id="panel-3d" class="relative order-1 lg:order-2 h-80 md:h-[420px] lg:h-auto lg:min-h-[520px]">
+        <canvas id="escena3d" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+      </div>
+
     </div>
+  </section>
 
-    <!-- Humedad Aire -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-sm font-medium text-gray-500">Humedad Aire</span>
-        <span class="text-xl">💨</span>
-      </div>
-      <div class="text-3xl font-bold text-gray-900" id="val-haire">-- %</div>
-      <p class="text-xs text-gray-400 mt-2">Sensor HDC1080</p>
-    </div>
+  <!-- Gráficas -->
+  <div class="grid lg:grid-cols-2 gap-6">
 
-    <!-- Humedad Suelo -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-sm font-medium text-gray-500">Humedad Suelo</span>
-        <span class="text-xl">🌱</span>
-      </div>
-      <div class="text-3xl font-bold text-gray-900" id="val-hsuelo">-- %</div>
-      <div class="mt-3">
-        <span id="badge-estado" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-600">
-          Cargando...
-        </span>
-      </div>
-    </div>
-
-    <!-- Luminosidad -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-sm font-medium text-gray-500">Luminosidad</span>
-        <span class="text-xl">☀️</span>
-      </div>
-      <div class="text-3xl font-bold text-gray-900" id="val-luz">-- lux</div>
-      <p class="text-xs text-gray-400 mt-2">Sensor AP3216</p>
-    </div>
-
-  </div>
-
-  <!-- Charts Containers -->
-  <div class="max-w-6xl mx-auto flex flex-col gap-8">
-    
     <!-- Gráfico 1: Temperatura y Humedad -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-        📊 Historial de Temperatura y Humedad
-      </h2>
+    <div class="bg-card p-6 rounded-[28px] shadow-suave">
+      <div class="flex items-center gap-2 mb-1">
+        <svg class="icono text-orange-500" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+        <h2 class="text-sm font-bold">Temperatura y humedad</h2>
+      </div>
+      <p class="text-xs text-muted mb-4">Últimas lecturas</p>
       <div class="relative h-64 w-full">
         <canvas id="plantChart"></canvas>
       </div>
     </div>
 
     <!-- Gráfico 2: Luminosidad -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-        ☀️ Historial de Luminosidad (Lux)
-      </h2>
+    <div class="bg-card p-6 rounded-[28px] shadow-suave">
+      <div class="flex items-center gap-2 mb-1">
+        <svg class="icono text-amber-500" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <h2 class="text-sm font-bold">Luminosidad</h2>
+      </div>
+      <p class="text-xs text-muted mb-4">Últimas lecturas, en lux</p>
       <div class="relative h-64 w-full">
         <canvas id="luxChart"></canvas>
       </div>
@@ -133,59 +231,185 @@
   </div>
 
   <!-- Pestaña Históricos -->
-  <div id="tab-hist" class="hidden max-w-6xl mx-auto flex flex-col gap-8">
+  <div id="tab-hist" class="hidden flex flex-col gap-6">
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-end gap-4">
-      <label class="text-sm text-gray-500">Desde
-        <input id="hist-desde" type="datetime-local" class="block mt-1 border border-gray-300 rounded-lg px-2 py-1 text-gray-800">
+    <div class="bg-card p-6 rounded-[28px] shadow-suave flex flex-wrap items-end gap-4">
+      <label class="text-xs font-semibold text-muted">Desde
+        <span class="relative block mt-1.5">
+          <input id="hist-desde" type="datetime-local" onclick="this.showPicker?.()" oninput="marcarRango(null)" class="fecha block bg-fondo rounded-xl pl-3 pr-10 py-2 text-sm text-ink font-medium outline-none ring-1 ring-transparent focus:ring-brand-500 transition cursor-pointer">
+          <svg class="icono !w-4 !h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </span>
       </label>
-      <label class="text-sm text-gray-500">Hasta
-        <input id="hist-hasta" type="datetime-local" class="block mt-1 border border-gray-300 rounded-lg px-2 py-1 text-gray-800">
+      <label class="text-xs font-semibold text-muted">Hasta
+        <span class="relative block mt-1.5">
+          <input id="hist-hasta" type="datetime-local" onclick="this.showPicker?.()" oninput="marcarRango(null)" class="fecha block bg-fondo rounded-xl pl-3 pr-10 py-2 text-sm text-ink font-medium outline-none ring-1 ring-transparent focus:ring-brand-500 transition cursor-pointer">
+          <svg class="icono !w-4 !h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </span>
       </label>
-      <button onclick="cargarHistorico()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-1.5 rounded-lg transition">Consultar</button>
-      <div class="flex gap-2 ml-auto">
-        <button onclick="rapido(1)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">1 h</button>
-        <button onclick="rapido(24)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">24 h</button>
-        <button onclick="rapido(24 * 7)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">7 días</button>
-        <button onclick="rapido(24 * 30)" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300">30 días</button>
+      <button onclick="cargarHistorico()" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2 rounded-xl transition">Consultar</button>
+      <div id="rangos" class="flex p-1 rounded-full bg-fondo ml-auto">
+        <button onclick="rapido(1)" data-horas="1" class="rango">1 h</button>
+        <button onclick="rapido(24)" data-horas="24" class="rango">24 h</button>
+        <button onclick="rapido(24 * 7)" data-horas="168" class="rango">7 días</button>
+        <button onclick="rapido(24 * 30)" data-horas="720" class="rango">30 días</button>
       </div>
-      <p id="hist-info" class="w-full text-xs text-gray-400"></p>
+      <p id="hist-info" class="w-full text-xs text-muted"></p>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 class="text-lg font-bold text-gray-800 mb-4">📊 Temperatura y Humedad</h2>
+    <div class="bg-card p-6 rounded-[28px] shadow-suave">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="icono text-orange-500" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+        <h2 class="text-sm font-bold">Temperatura y humedad</h2>
+      </div>
       <div class="relative h-72 w-full"><canvas id="histPlantChart"></canvas></div>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 class="text-lg font-bold text-gray-800 mb-4">☀️ Luminosidad (Lux)</h2>
+    <div class="bg-card p-6 rounded-[28px] shadow-suave">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="icono text-amber-500" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <h2 class="text-sm font-bold">Luminosidad (lux)</h2>
+      </div>
       <div class="relative h-72 w-full"><canvas id="histLuxChart"></canvas></div>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h2 class="text-lg font-bold text-gray-800 mb-4">🗂️ Registros</h2>
-      <div class="overflow-auto max-h-96">
-        <table class="w-full text-sm">
-          <thead class="text-left text-gray-500 sticky top-0 bg-white">
-            <tr><th class="py-2 pr-4">Fecha</th><th class="pr-4">Temp (°C)</th><th class="pr-4">Hum. Aire (%)</th><th class="pr-4">Hum. Suelo (%)</th><th class="pr-4">Luz (lux)</th><th>Lecturas</th></tr>
+    <div class="bg-card p-6 rounded-[28px] shadow-suave">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="icono text-brand-600" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
+        <h2 class="text-sm font-bold">Registros</h2>
+      </div>
+      <div class="overflow-x-auto -mx-2 px-2">
+        <table class="w-full text-sm num border-separate border-spacing-0">
+          <thead class="text-muted sticky top-0 z-10">
+            <tr>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-left rounded-l-xl">Fecha</th>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-right"><span class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style="background:#ee8a5f"></span>Temp <span class="normal-case font-semibold opacity-70">°C</span></th>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-right"><span class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style="background:#5aa2d8"></span>Hum. aire <span class="normal-case font-semibold opacity-70">%</span></th>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-right"><span class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style="background:#22b07d"></span>Hum. suelo <span class="normal-case font-semibold opacity-70">%</span></th>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-right"><span class="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle" style="background:#e8a93b"></span>Luz <span class="normal-case font-semibold opacity-70">lux</span></th>
+              <th class="px-4 py-3 bg-fondo text-[10.5px] font-bold uppercase tracking-wider text-right rounded-r-xl">Lecturas</th>
+            </tr>
           </thead>
-          <tbody id="hist-tabla" class="text-gray-800"></tbody>
+          <tbody id="hist-tabla" class="text-ink"></tbody>
         </table>
+      </div>
+      <!-- Paginacion (sobre las filas ya consultadas, no vuelve a pedir datos) -->
+      <div id="paginacion" class="hidden flex items-center justify-between gap-3 pt-4 text-xs text-muted">
+        <span id="pag-info" class="num"></span>
+        <div class="flex items-center gap-1">
+          <button id="pag-ini" onclick="cambiarPagina(-Infinity)" class="w-8 h-8 grid place-items-center rounded-full text-ink hover:bg-fondo disabled:opacity-30 disabled:hover:bg-transparent transition" aria-label="Primera página (más recientes)" title="Más recientes">
+            <svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+          </button>
+          <button id="pag-ant" onclick="cambiarPagina(-1)" class="w-8 h-8 grid place-items-center rounded-full text-ink hover:bg-fondo disabled:opacity-30 disabled:hover:bg-transparent transition" aria-label="Página anterior">
+            <svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <span id="pag-num" class="num font-semibold text-ink px-2"></span>
+          <button id="pag-sig" onclick="cambiarPagina(1)" class="w-8 h-8 grid place-items-center rounded-full text-ink hover:bg-fondo disabled:opacity-30 disabled:hover:bg-transparent transition" aria-label="Página siguiente">
+            <svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button id="pag-fin" onclick="cambiarPagina(Infinity)" class="w-8 h-8 grid place-items-center rounded-full text-ink hover:bg-fondo disabled:opacity-30 disabled:hover:bg-transparent transition" aria-label="Última página (más antiguos)" title="Más antiguos">
+            <svg class="icono !w-4 !h-4" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
   </div>
+
+  <!-- Pie de pagina -->
+  <footer class="mt-12 pt-6 border-t border-linea flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-muted">
+    <p><span class="font-semibold text-ink">Internet de las Cosas</span> - Universidad Pontificia Bolivariana</p>
+    <p>Desarrollado por Daniel Ortiz Aristizábal, Emanuel Londoño Osorio y Valeria Zuluaga Alzate</p>
+  </footer>
 
   <!-- JavaScript -->
   <script>
     const API_URL = "http://" + window.location.hostname + ":8000/api/plantas";
     let plantChart, luxChart, histPlantChart, histLuxChart;
 
+    // Paleta de las gráficas
+    const COL = { temp: '#ee8a5f', haire: '#5aa2d8', hsuelo: '#22b07d', luz: '#e8a93b' };
+    const relleno = color => ctx => {
+      const { chart } = ctx, a = chart.chartArea;
+      if (!a) return 'transparent';
+      const g = chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+      g.addColorStop(0, color + '47');
+      g.addColorStop(1, color + '00');
+      return g;
+    };
+    const linea = color => ({ borderColor: color, backgroundColor: color, borderWidth: 2, tension: 0.35, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderWidth: 2, pointHoverBorderColor: '#fff' });
+    const opciones = tituloY => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 6, boxHeight: 6, padding: 16 } },
+        tooltip: { backgroundColor: '#ffffff', titleColor: '#14231b', bodyColor: '#14231b', borderColor: '#e6ece3', borderWidth: 1, padding: 12, cornerRadius: 12, boxPadding: 4, usePointStyle: true },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
+        y: { beginAtZero: true, grid: { color: '#eef2ec' }, border: { display: false }, title: { display: true, text: tituloY } },
+      },
+    });
+
     function initCharts() {
       Chart.defaults.font.family = 'Manrope, sans-serif';
+      Chart.defaults.font.size = 11;
       [plantChart, luxChart] = crearGraficas('plantChart', 'luxChart');
       [histPlantChart, histLuxChart] = crearGraficas('histPlantChart', 'histLuxChart');
+      const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      for (const c of [histPlantChart, histLuxChart]) {
+        if (quieto) c.options.animation = false;
+        else c.options.animations = animTrazo;
+      }
+      temaGraficas();
     }
+
+    // Historicos: cada linea se traza de izquierda a derecha en TRAZO_MS, tenga los puntos que tenga;
+    // cada punto parte desde el anterior, asi se ve el trazo avanzar en vez de crecer desde abajo
+    const TRAZO_MS = 1200;
+    const pasoTrazo = ctx => TRAZO_MS / Math.max(ctx.chart.data.labels.length, 1);
+    const yAnterior = ctx => {
+      const previo = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.index - 1];
+      return previo ? previo.getProps(['y'], true).y : ctx.chart.scales.y.getPixelForValue(0);
+    };
+    const esperaTrazo = clave => ctx => {
+      if (ctx.type !== 'data' || ctx[clave]) return 0;
+      ctx[clave] = true;
+      return ctx.index * pasoTrazo(ctx);
+    };
+    const animTrazo = {
+      x: { type: 'number', easing: 'linear', duration: pasoTrazo, from: NaN, delay: esperaTrazo('xTrazado') },
+      y: { type: 'number', easing: 'linear', duration: pasoTrazo, from: yAnterior, delay: esperaTrazo('yTrazado') },
+    };
+
+    // Lee los tokens del tema actual y los aplica a las 4 graficas
+    function temaGraficas() {
+      const v = n => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(n).trim().split(' ').join(',')})`;
+      Chart.defaults.color = v('--muted');
+      for (const c of [plantChart, luxChart, histPlantChart, histLuxChart]) {
+        c.options.color = v('--muted');
+        for (const eje of Object.values(c.options.scales)) { eje.ticks.color = v('--muted'); if (eje.title) eje.title.color = v('--muted'); }
+        c.options.plugins.legend.labels.color = v('--muted');
+        c.options.scales.y.grid.color = v('--linea');
+        Object.assign(c.options.plugins.tooltip, { backgroundColor: v('--card'), titleColor: v('--ink'), bodyColor: v('--ink'), borderColor: v('--linea') });
+        c.update('none');
+      }
+    }
+
+    function alternarTema() {
+      const oscuro = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('tema', oscuro ? 'dark' : 'light'); } catch (e) {}
+      temaGraficas();
+    }
+
+    // si no hay tema guardado, sigue los cambios del sistema
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      let guardado = null;
+      try { guardado = localStorage.getItem('tema'); } catch (err) {}
+      if (guardado) return;
+      document.documentElement.classList.toggle('dark', e.matches);
+      temaGraficas();
+    });
 
     function crearGraficas(idPlant, idLux) {
       // Gráfico 1: Temp & Humedad
@@ -195,17 +419,12 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Temp (°C)', data: [], borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.3 },
-            { label: 'Hum. Aire (%)', data: [], borderColor: '#3b82f6', backgroundColor: '#3b82f620', tension: 0.3 },
-            { label: 'Hum. Suelo (%)', data: [], borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.3 }
+            { label: 'Temp (°C)', data: [], ...linea(COL.temp) },
+            { label: 'Hum. Aire (%)', data: [], ...linea(COL.haire) },
+            { label: 'Hum. Suelo (%)', data: [], ...linea(COL.hsuelo) }
           ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
-          scales: { y: { beginAtZero: true, title: { display: true, text: 'Valor / Porcentaje' } } }
-        }
+        options: opciones('Valor / Porcentaje')
       });
 
       // Gráfico 2: Luminosidad
@@ -215,15 +434,10 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Luminosidad (lux)', data: [], borderColor: '#f59e0b', backgroundColor: '#f59e0b20', fill: true, tension: 0.3 }
+            { label: 'Luminosidad (lux)', data: [], ...linea(COL.luz), backgroundColor: relleno(COL.luz), fill: true }
           ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
-          scales: { y: { beginAtZero: true, title: { display: true, text: 'Lux (lx)' } } }
-        }
+        options: opciones('Lux (lx)')
       });
       return [plantChart, luxChart];
     }
@@ -242,8 +456,8 @@
     function mostrarTab(tab) {
       for (const t of ['vivo', 'hist']) {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
-        document.getElementById(`btn-${t}`).className = 'tab px-4 py-2 rounded-lg text-sm font-semibold ' +
-          (t === tab ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50');
+        document.getElementById(`btn-${t}`).className = 'tab flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition ' +
+          (t === tab ? 'bg-card text-ink shadow-suave' : 'text-muted hover:text-ink');
       }
       if (tab === 'hist' && !histPlantChart.data.labels.length) rapido(24);
     }
@@ -251,11 +465,51 @@
     // datetime-local trabaja en hora local sin zona
     const aInput = d => new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
+    // Marca el boton de rango rapido activo (null = rango manual)
+    function marcarRango(horas) {
+      for (const b of document.querySelectorAll('#rangos .rango')) {
+        const activo = Number(b.dataset.horas) === horas;
+        b.className = 'rango text-xs font-semibold px-3.5 py-1.5 rounded-full transition ' +
+          (activo ? 'bg-card text-ink shadow-suave' : 'text-muted hover:text-ink');
+      }
+    }
+
     function rapido(horas) {
+      marcarRango(horas);
       const hasta = new Date();
       document.getElementById('hist-hasta').value = aInput(hasta);
       document.getElementById('hist-desde').value = aInput(new Date(hasta - horas * 3600000));
       cargarHistorico();
+    }
+
+    // Tabla de registros paginada en el navegador
+    const POR_PAGINA = 15;
+    let filasTabla = [], paginaTabla = 0;
+
+    function pintarTabla() {
+      const total = filasTabla.length, paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+      const ini = paginaTabla * POR_PAGINA, fin = Math.min(ini + POR_PAGINA, total);
+      const TD = 'px-4 py-3 border-b border-linea text-right font-semibold';
+      document.getElementById('hist-tabla').innerHTML = filasTabla.slice(ini, fin).map(r => {
+        const d = new Date(r.timestamp);
+        return `<tr class="hover:bg-fondo/70 transition-colors">` +
+          `<td class="px-4 py-3 border-b border-linea whitespace-nowrap"><span class="font-semibold">${d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}</span>` +
+          `<span class="text-muted ml-2">${d.toLocaleTimeString()}</span></td>` +
+          `<td class="${TD}">${r.temperatura}</td><td class="${TD}">${r.humedad_aire}</td><td class="${TD}">${r.humedad_suelo}</td>` +
+          `<td class="${TD}">${r.luminosidad}</td>` +
+          `<td class="${TD}"><span class="inline-block min-w-[2rem] text-center px-2 py-0.5 rounded-full bg-fondo text-muted text-xs">${r.lecturas}</span></td></tr>`;
+      }).join('');
+      document.getElementById('paginacion').classList.toggle('hidden', total <= POR_PAGINA);
+      document.getElementById('pag-info').innerText = `${ini + 1}-${fin} de ${total} registros`;
+      document.getElementById('pag-num').innerText = `${paginaTabla + 1} / ${paginas}`;
+      document.getElementById('pag-ini').disabled = document.getElementById('pag-ant').disabled = paginaTabla === 0;
+      document.getElementById('pag-fin').disabled = document.getElementById('pag-sig').disabled = paginaTabla >= paginas - 1;
+    }
+
+    function cambiarPagina(delta) {
+      const paginas = Math.ceil(filasTabla.length / POR_PAGINA);
+      paginaTabla = Math.min(Math.max(paginaTabla + delta, 0), paginas - 1);
+      pintarTabla();
     }
 
     async function cargarHistorico() {
@@ -272,20 +526,27 @@
         const fmt = ts => new Date(ts).toLocaleString([], largo
           ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }
           : { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        // se vacian primero para que el trazo arranque de cero en cada consulta
+        for (const c of [histPlantChart, histLuxChart]) {
+          c.data.labels = [];
+          for (const d of c.data.datasets) d.data = [];
+          c.update('none');
+        }
         pintar(histPlantChart, histLuxChart, rows, rows.map(r => fmt(r.timestamp)));
 
         const total = rows.reduce((s, r) => s + r.lecturas, 0);
         info.innerText = rows.length
           ? `${total} lecturas en ${rows.length} puntos` + (total > rows.length ? ' (promediadas por ventana de tiempo)' : '')
           : 'Sin datos en ese rango.';
-        document.getElementById('hist-tabla').innerHTML = rows.slice().reverse().map(r =>
-          `<tr class="border-t border-gray-100"><td class="py-1.5 pr-4">${new Date(r.timestamp).toLocaleString()}</td>` +
-          `<td class="pr-4">${r.temperatura}</td><td class="pr-4">${r.humedad_aire}</td><td class="pr-4">${r.humedad_suelo}</td>` +
-          `<td class="pr-4">${r.luminosidad}</td><td>${r.lecturas}</td></tr>`).join('');
+        filasTabla = rows.slice().reverse();
+        paginaTabla = 0;
+        pintarTabla();
       } catch (err) {
         info.innerText = 'Error cargando históricos: ' + err.message;
       }
     }
+
+    const BADGE_BASE = "inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-full ring-1 ";
 
     async function fetchData() {
       try {
@@ -301,11 +562,11 @@
           const badge = document.getElementById('badge-estado');
           badge.innerText = data.estado_planta;
           if (data.estado_planta === 'OPTIMO') {
-            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-800";
+            badge.className = BADGE_BASE + "bg-emerald-50 text-emerald-700 ring-emerald-600/15 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20";
           } else if (data.estado_planta === 'NECESITA_RIEGO') {
-            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-100 text-amber-800";
+            badge.className = BADGE_BASE + "bg-amber-50 text-amber-700 ring-amber-600/15 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20";
           } else {
-            badge.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-rose-100 text-rose-800";
+            badge.className = BADGE_BASE + "bg-rose-50 text-rose-700 ring-rose-600/15 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20";
           }
         }
 
@@ -326,38 +587,72 @@
     // --- Alertas en vivo (servicio alertas :5050, websocket) ---
     const ALERTAS_URL = "http://" + window.location.hostname + ":5050";
     const WS_URL = "ws://" + window.location.hostname + ":5050/ws";
-    const BANNER_BASE = "max-w-6xl mx-auto mb-4 px-5 py-3 rounded-2xl shadow-sm font-semibold text-white";
+    const BANNER_BASE = "aparecer mb-6 flex items-center gap-4 p-3 pr-6 rounded-3xl ring-1 shadow-suave bg-card";
+    // tono de cada estado: fondo con degradado, borde, cuadro del icono y color del valor
+    const TONOS = {
+      alarma: { caja: 'bg-gradient-to-r from-rose-50 to-card ring-rose-200/70 dark:from-rose-500/15 dark:ring-rose-500/25', icono: 'bg-rose-500 text-white shadow-lg shadow-rose-500/25', valor: 'text-rose-600 dark:text-rose-400' },
+      sin:    { caja: 'ring-linea', icono: 'bg-pista text-muted', valor: 'text-muted' },
+      ok:     { caja: 'bg-gradient-to-r from-brand-50 to-card ring-brand-100 dark:from-brand-500/15 dark:ring-brand-500/25', icono: 'bg-brand-500 text-white shadow-lg shadow-brand-500/25', valor: 'text-brand-600 dark:text-brand-500' },
+    };
+    const ICONOS_ALERTA = {
+      alarma: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+      sin: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/>',
+      ok: '<path d="M20 6 9 17l-5-5"/>',
+    };
+    const esc = t => String(t).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
     let ocultarBanner;
 
     const horaDe = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const planta = id => id.split(':').pop();
+
+    function mostrarBanner(banner, tono, titulo, detalle, valor) {
+      const t = TONOS[tono], estabaOculto = banner.classList.contains('hidden');
+      banner.className = BANNER_BASE + ' ' + t.caja;
+      if (!estabaOculto) banner.classList.remove('aparecer');   // solo se anima al aparecer
+      banner.innerHTML =
+        `<span class="w-11 h-11 shrink-0 rounded-2xl grid place-items-center ${t.icono}"><svg class="icono" viewBox="0 0 24 24">${ICONOS_ALERTA[tono]}</svg></span>` +
+        `<div class="min-w-0 flex-1"><p class="text-sm font-bold text-ink truncate">${titulo}</p><p class="text-xs text-muted truncate">${detalle}</p></div>` +
+        (valor ? `<span class="num text-2xl font-bold tracking-tight ${t.valor}">${valor}</span>` : '');
+    }
 
     function pintarAlerta(msg) {
       const banner = document.getElementById('banner-alerta');
       const card = document.getElementById('card-temp');
       const valor = document.getElementById('val-temp');
       const alarma = msg.estado === 'ALARMA';
-      card.classList.toggle('border-red-500', alarma);
-      card.classList.toggle('border-2', alarma);
-      card.classList.toggle('border-gray-100', !alarma);
-      valor.classList.toggle('text-red-600', alarma);
-      valor.classList.toggle('text-gray-900', !alarma);
+      card.classList.toggle('ring-2', alarma);
+      card.classList.toggle('ring-rose-400', alarma);
+      card.classList.toggle('bg-rose-50', alarma);
+      card.classList.toggle('dark:bg-rose-500/10', alarma);
+      card.classList.toggle('ring-1', !alarma);
+      card.classList.toggle('ring-linea', !alarma);
+      card.classList.toggle('bg-card/70', !alarma);
+      valor.classList.toggle('text-rose-600', alarma);
+      valor.classList.toggle('text-ink', !alarma);
       clearTimeout(ocultarBanner);
+      const p = esc(planta(msg.entity_id));
 
       if (alarma) {
-        banner.className = BANNER_BASE + ' bg-red-600';
-        banner.innerText = `⚠ ALARMA · ${planta(msg.entity_id)} · Temperatura ${msg.valor.toFixed(1)} °C ${msg.umbral} °C · desde ${horaDe(msg.desde)}`;
+        mostrarBanner(banner, 'alarma', `Temperatura fuera de rango - ${p}`,
+          `Umbral ${esc(msg.umbral)} °C - desde las ${horaDe(msg.desde)}`, `${msg.valor.toFixed(1)} °C`);
       } else if (msg.estado === 'SIN_DATOS') {
-        banner.className = BANNER_BASE + ' bg-gray-500';
-        banner.innerText = `SIN DATOS · ${planta(msg.entity_id)} · última trama ` + (msg.ultimo_ts ? horaDe(msg.ultimo_ts) : '—');
+        mostrarBanner(banner, 'sin', `Sin datos del sensor - ${p}`,
+          'Última trama: ' + (msg.ultimo_ts ? horaDe(msg.ultimo_ts) : '—'), '');
       } else if (msg.de === 'ALARMA' || msg.de === 'SIN_DATOS') {
-        banner.className = BANNER_BASE + ' bg-emerald-600';
-        banner.innerText = `✓ OK · ${planta(msg.entity_id)} · Temperatura ${msg.valor.toFixed(1)} °C`;
+        mostrarBanner(banner, 'ok', `Todo en orden - ${p}`, 'La temperatura volvió al rango normal', `${msg.valor.toFixed(1)} °C`);
         ocultarBanner = setTimeout(() => banner.classList.add('hidden'), 5000);
       } else {
         banner.classList.add('hidden');
       }
     }
+
+    // Los ojos de la mascota apuntan al cursor; data-reach es el desplazamiento maximo en unidades del viewBox
+    addEventListener('pointermove', e => document.querySelectorAll('.mascota').forEach(m => {
+      const r = m.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy) || 1, k = Math.min(d / (r.width * 1.2), 1) * m.dataset.reach / d;
+      m.style.setProperty('--mx', (dx * k).toFixed(2) + 'px');
+      m.style.setProperty('--my', (dy * k).toFixed(2) + 'px');
+    }), { passive: true });
 
     function conectarAlertas() {
       fetch(`${ALERTAS_URL}/estado`).then(r => r.ok ? r.json() : null).then(m => m && pintarAlerta(m)).catch(() => {});
@@ -368,11 +663,185 @@
 
     window.onload = () => {
       initCharts();
+      marcarRango(null);
       mostrarTab('vivo');
       fetchData();
       setInterval(fetchData, 5000); // Polling cada 5 segundos
       conectarAlertas();
     };
+  </script>
+
+  <!-- Escena 3D del hero: aparte del resto, si falla el dashboard sigue igual -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+    const canvas = document.getElementById('escena3d');
+    const panel = document.getElementById('panel-3d');
+
+    try {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const scene = new THREE.Scene();
+      scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+      // luz principal calida + relleno frio suave; el entorno solo aporta reflejos tenues
+      const sol = new THREE.DirectionalLight(0xfff4e6, 2.2);
+      sol.position.set(200, 400, 250);
+      sol.castShadow = true;
+      sol.shadow.mapSize.set(2048, 2048);
+      Object.assign(sol.shadow.camera, { left: -300, right: 300, top: 300, bottom: -300, near: 10, far: 1200 });
+      sol.shadow.radius = 6;
+      scene.add(sol);
+      const relleno = new THREE.DirectionalLight(0xe6f0ff, 0.5);
+      relleno.position.set(-300, 150, -200);
+      scene.add(relleno);
+
+      const piso = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.ShadowMaterial({ opacity: 0.1 }));
+      piso.rotation.x = -Math.PI / 2;
+      piso.receiveShadow = true;
+      scene.add(piso);
+
+      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+      const [gPlanta, gCactus] = await Promise.all(['assets/planta.glb', 'assets/cactus.glb'].map(f => loader.loadAsync(f)));
+      const sombras = o => o.traverse(m => {
+        if (!m.isMesh) return;
+        m.castShadow = true; m.receiveShadow = true;
+        m.material.envMapIntensity = 0.55;   // menos brillo de entorno: colores mas saturados
+      });
+
+      // Maceta: Houseplant de Quaternius (CC0). Centrada en el origen, 0.338 de diametro, tierra en y = 0.285
+      const planta = gPlanta.scene;
+      const k = 170 / 0.338;   // maceta de 170 mm
+      planta.scale.setScalar(k);
+      scene.add(planta);
+      planta.updateMatrixWorld(true);
+      sombras(planta);
+      abrirHojas(planta, 62, 40);
+
+      // Carcasa impresa: solo la piel exterior (sin interior ni encastres), en mm y con la base en y = 0.
+      // Por los agujeros se ven caras traseras: se pintan oscuras, como el hueco de una carcasa real
+      const cactus = gCactus.scene;
+      const pieles = [];
+      cactus.traverse(m => { if (m.isMesh) pieles.push(m); });
+      for (const m of pieles) m.add(new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ color: 0x0b1a12, side: THREE.BackSide })));
+      cactus.add(antena());
+      cactus.position.set(0, 0.285 * k - 6, 0);
+      sombras(cactus);
+      scene.add(cactus);
+
+      const camara = new THREE.PerspectiveCamera(30, 1, 1, 5000);
+      camara.position.set(690, 760, 470);   // ~38° desde arriba, ~55° girada respecto al frente
+      const controls = new OrbitControls(camara, canvas);
+      controls.target.set(0, 140, 0);
+      controls.enableDamping = true;
+      controls.enablePan = false;
+      controls.minDistance = 250;    // de cerca la carcasa llena el panel
+      controls.maxDistance = 2400;
+      controls.minPolarAngle = 0.05;
+      controls.maxPolarAngle = 1.55; // hasta el borde de la maceta, sin pasar bajo el piso
+      controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      controls.autoRotateSpeed = 0.6;
+
+      let base = camara.position.distanceTo(controls.target);
+      const ajustar = () => {
+        const w = panel.clientWidth, h = panel.clientHeight;
+        if (!w || !h) return;
+        renderer.setSize(w, h, false);
+        camara.aspect = w / h;
+        // en pantallas angostas se aleja la camara para que la maceta entre completa, sin perder el zoom del usuario
+        const nueva = 1000 / Math.min(camara.aspect, 1);
+        const offset = camara.position.clone().sub(controls.target);
+        camara.position.copy(controls.target).add(offset.multiplyScalar(nueva / base));
+        base = nueva;
+        camara.updateProjectionMatrix();
+      };
+      new ResizeObserver(ajustar).observe(panel);
+      ajustar();
+
+      // solo se dibuja mientras el hero esta en pantalla
+      let visible = true;
+      new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(panel);
+      renderer.setAnimationLoop(() => {
+        if (!visible || document.hidden) return;
+        controls.update();
+        renderer.render(scene, camara);
+      });
+      canvas.classList.add('listo');
+    } catch (err) {
+      console.error('Escena 3D no disponible:', err);
+      panel.classList.add('hidden');
+    }
+
+    // Antena en L que sale del agujero del costado +X de la carcasa (centro en x=36.9, y=63, z=3)
+    function antena() {
+      const negro = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.5 });
+      const R = 4, X0 = 36.9, Y0 = 63, Z0 = 3, LARGO_H = 18, LARGO_V = 80;
+      const g = new THREE.Group();
+      const horiz = new THREE.Mesh(new THREE.CylinderGeometry(R, R, LARGO_H, 24), negro);
+      horiz.rotation.z = Math.PI / 2;
+      horiz.position.set(X0 + LARGO_H / 2, Y0, Z0);
+      const codo = new THREE.Mesh(new THREE.SphereGeometry(R, 24, 16), negro);
+      codo.position.set(X0 + LARGO_H, Y0, Z0);
+      const vert = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.85, R, LARGO_V, 24), negro);
+      vert.position.set(X0 + LARGO_H, Y0 + LARGO_V / 2, Z0);
+      const punta = new THREE.Mesh(new THREE.SphereGeometry(R * 0.85, 24, 16), negro);
+      punta.position.set(X0 + LARGO_H, Y0 + LARGO_V, Z0);
+      g.add(horiz, codo, vert, punta);
+      return g;
+    }
+
+    // Corre cada hoja (componente conexa de la malla verde) hacia afuera hasta salir de una elipse
+    // de semiejes a (X) y b (Z) en mm, para dejar el centro de la tierra libre para la carcasa
+    function abrirHojas(planta, a, b) {
+      const hojas = [];
+      planta.traverse(o => { if (o.isMesh && o.material.name === 'Plant_Green') hojas.push(o); });
+      for (const m of hojas) {
+        const geo = m.geometry.clone().applyMatrix4(m.matrixWorld);
+        const pos = geo.attributes.position, idx = geo.index, n = pos.count;
+        const padre = new Int32Array(n).map((_, i) => i);
+        const raiz = i => { while (padre[i] !== i) i = padre[i] = padre[padre[i]]; return i; };
+        for (let t = 0; t < idx.count; t += 3) {
+          const r0 = raiz(idx.getX(t));
+          padre[raiz(idx.getX(t + 1))] = r0;
+          padre[raiz(idx.getX(t + 2))] = r0;
+        }
+        // vertices duplicados en la misma posicion tambien son de la misma hoja
+        const vistos = new Map();
+        for (let i = 0; i < n; i++) {
+          const clave = pos.getX(i).toFixed(2) + ',' + pos.getY(i).toFixed(2) + ',' + pos.getZ(i).toFixed(2);
+          if (vistos.has(clave)) padre[raiz(i)] = raiz(vistos.get(clave)); else vistos.set(clave, i);
+        }
+        const grupos = new Map();
+        for (let i = 0; i < n; i++) {
+          const r = raiz(i);
+          if (!grupos.has(r)) grupos.set(r, []);
+          grupos.get(r).push(i);
+        }
+        for (const vs of grupos.values()) {
+          let cx = 0, cz = 0;
+          for (const i of vs) { cx += pos.getX(i); cz += pos.getZ(i); }
+          const th = Math.atan2(cz, cx), ux = Math.cos(th), uz = Math.sin(th);
+          let rin = Infinity;
+          for (const i of vs) rin = Math.min(rin, pos.getX(i) * ux + pos.getZ(i) * uz);
+          const d = Math.max(0, 1 / Math.hypot(ux / a, uz / b) - rin);
+          for (const i of vs) pos.setXYZ(i, pos.getX(i) + ux * d, pos.getY(i), pos.getZ(i) + uz * d);
+        }
+        geo.computeVertexNormals();
+        const nueva = new THREE.Mesh(geo, m.material);
+        nueva.castShadow = nueva.receiveShadow = true;
+        planta.parent.add(nueva);
+        m.visible = false;
+      }
+    }
   </script>
 </body>
 </html>
