@@ -1,6 +1,6 @@
-# Checklist: conectar el sensor real
+# Checklist
 
-Pasos para montar la placa con los sensores reales y comprobar que los datos llegan a la nube.
+Pasos para montar la placa con los sensores reales y comprobar que los datos llegan a la nube. Qué pasa con la trama después de salir de la placa: [arquitectura.md](arquitectura.md).
 
 ## 1. Cableado (T-Beam V1.1)
 
@@ -15,7 +15,7 @@ Pasos para montar la placa con los sensores reales y comprobar que los datos lle
 | GPS | — | integrado, solo necesita cielo abierto |
 
 - [ ] **No usar GPIO0 ni GPIO4:** son ADC2 y no leen con el WiFi encendido.
-- [ ] Medir con multímetro unos 3,3 V entre VCC y GND **en el pin del sensor**. La última vez los sensores I2C no respondían por cableado.
+- [ ] Medir con multímetro unos 3,3 V entre VCC y GND **en el pin del sensor**.
 
 ## 2. `firmware/src/secretos.h`
 
